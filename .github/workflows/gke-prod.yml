@@ -3,7 +3,9 @@ name: Build and Deploy to GKE Prod
 on:
   push:
     branches:
-      - develop
+      - main
+    tags:
+      - "v*"
 
 # Environment variables available to all jobs and steps in this workflow
 env:
