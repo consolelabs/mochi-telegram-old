@@ -146,7 +146,10 @@ const run = async (ctx: any) => {
   const telegramUsername = ctx.from.username
   if (!telegramUsername) {
     ctx.replyWithMarkdown(
-      "Please set your username in *Settings -> Edit Profile*."
+      "Please set your username in *Settings -> Edit Profile*.",
+      {
+        reply_to_message_id: ctx.message.message_id,
+      }
     )
     return
   }
@@ -159,12 +162,17 @@ const run = async (ctx: any) => {
   })
   if (!dcOk && error) {
     ctx.replyWithMarkdown(
-      "You have not linked your telegram to any discord account.\nUse *$telegram config* in discord to execute action."
+      "You have not linked your telegram to any discord account.\nUse *$telegram config* in discord to execute action.",
+      {
+        reply_to_message_id: ctx.message.message_id,
+      }
     )
     return
   }
   if (!dcOk) {
-    ctx.reply("Action failed. Please try again later.")
+    ctx.reply("Action failed. Please try again later.", {
+      reply_to_message_id: ctx.message.message_id,
+    })
     return
   }
   const { data: wlData, ok: wlOk } = await jsonFetch(
@@ -176,7 +184,12 @@ const run = async (ctx: any) => {
     return
   }
   const buffer = await renderWatchlist(<any[]>wlData)
-  ctx.sendPhoto({ source: buffer })
+  ctx.sendPhoto(
+    { source: buffer },
+    {
+      reply_to_message_id: ctx.message.message_id,
+    }
+  )
 }
 
 export default run
