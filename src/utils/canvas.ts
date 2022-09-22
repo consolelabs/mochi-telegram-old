@@ -6,7 +6,6 @@ import {
   loadImage,
 } from "canvas"
 import { ChartJSNodeCanvas } from "chartjs-node-canvas"
-import { GuildMember, MessageAttachment } from "discord.js"
 import { CircleleStats, RectangleStats } from "types/canvas"
 
 export function widthOf(ctx: CanvasRenderingContext2D, text: string): number {
@@ -152,11 +151,6 @@ export async function drawRectangleAvatar(
   ctx.restore()
 }
 
-export function getHighestRoleColor(member: GuildMember) {
-  const { hexColor } = member.roles.highest
-  return hexColor === "#000000" ? "white" : hexColor
-}
-
 export function drawDivider(
   ctx: CanvasRenderingContext2D,
   fromX: number,
@@ -214,7 +208,11 @@ export async function renderChartImage({
   if (lineOnly) {
     colorConfig.backgroundColor = "rgba(0, 0, 0, 0)"
   }
-  const chartCanvas = new ChartJSNodeCanvas({ width: 700, height: 450 })
+  const chartCanvas = new ChartJSNodeCanvas({
+    width: 700,
+    height: 450,
+    backgroundColour: "#202020",
+  })
   const axisConfig = {
     ticks: {
       font: {
