@@ -10,7 +10,7 @@ env:
   GITHUB_SHA: ${{ github.sha }}
   REGISTRY_HOSTNAME: gcr.io
   GKE_PROJECT: console-labs-prod
-  IMAGE: consolelabs/mochi-telegram-bot
+  IMAGE: consolelabs/mochi-telegram
   K8S_ENVIRONMENT: dev
 
 jobs:
@@ -54,9 +54,9 @@ jobs:
           ref: main
       - name: Update bot version
         run: |
-          cd ./infrastructure/mochi-telegram-bot/$K8S_ENVIRONMENT
+          cd ./infrastructure/mochi-telegram/$K8S_ENVIRONMENT
           git config user.name jphuc96
           git config user.email jphuc96@gmail.com
           /tmp/kustomize edit set image $REGISTRY_HOSTNAME/$GKE_PROJECT/$IMAGE=$REGISTRY_HOSTNAME/$GKE_PROJECT/$IMAGE:${GITHUB_SHA}
-          git commit -am "[skip ci] mochi-telegram-bot ${K8S_ENVIRONMENT} image update"
+          git commit -am "[skip ci] mochi-telegram ${K8S_ENVIRONMENT} image update"
           git push origin main
