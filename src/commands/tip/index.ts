@@ -8,12 +8,14 @@ const run = async (ctx: any) => {
     ctx.replyWithMarkdown(
       "Insufficient arguments.\nSyntax: *$tip <discord_id> <amount> <symbol>*"
     )
+    return
   }
 
   const [recipientDiscordId, amountArg, cryptocurrency] = args.slice(1)
   let amount = parseFloat(amountArg)
   if ((isNaN(amount) || amount <= 0) && amountArg !== "all") {
     ctx.reply("Invalid amount")
+    return
   }
 
   const telegramUsername = ctx.from.username
@@ -62,7 +64,6 @@ const run = async (ctx: any) => {
   }
 
   const {
-    data,
     ok,
     error: err,
     status,
