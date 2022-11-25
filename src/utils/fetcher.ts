@@ -7,7 +7,7 @@ import { snakeCase } from "change-case"
 
 type SerializableValue = string | number | boolean | undefined | null
 
-type RequestInit = NativeRequestInit & {
+type RequestInit = Omit<NativeRequestInit, "body"> & {
   /**
    * Whether to hide the 500 error with some generic message e.g "Something went wrong"
    * */
@@ -22,6 +22,16 @@ type RequestInit = NativeRequestInit & {
    * Default to true
    * */
   queryCamelToSnake?: boolean
+  /**
+   * For body payload (POST requests)
+   * Toggle auto convert camelCase to snake_case when sending request e.g `guildId` will turn into `guild_id`
+   * Default to true
+   * */
+  bodyCamelToSnake?: boolean
+  /**
+   * The body payload
+   * */
+  body?: string | Record<string, any>
 }
 
 type Payload = {
@@ -32,12 +42,14 @@ type OkPayload = {
   ok: true
   data: Record<string, any>
   error: null
+  status?: number
 } & Payload
 
 type ErrPayload = {
   ok: false
   data: null
   error: string
+  status?: number
 } & Payload
 
 type OkResponse<T> = {
@@ -58,6 +70,30 @@ const defaultInit: RequestInit = {
   queryCamelToSnake: true,
 }
 
+function isObject(v: any): v is object {
+  return typeof v === "object" && v !== null && !Array.isArray(v)
+}
+
+function convertToSnakeCase<T extends Record<string | number, any>>(obj: T): T {
+  const converted: Record<string | number, any> = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (isObject(value)) {
+      converted[snakeCase(key)] = convertToSnakeCase(value)
+    } else if (Array.isArray(value)) {
+      converted[snakeCase(key)] = value.map((v) => {
+        if (isObject(v)) {
+          return convertToSnakeCase(v)
+        }
+        return v
+      })
+    } else {
+      converted[snakeCase(key)] = value
+    }
+  }
+
+  return converted as T
+}
+
 export async function jsonFetch<T>(
   url: string,
   init: RequestInit = {}
@@ -65,25 +101,48 @@ export async function jsonFetch<T>(
   let log = ""
   try {
     const mergedInit = deepmerge(defaultInit, init)
-    const { autoWrap500Error, query: _query, ...validInit } = mergedInit
-    const query: typeof _query = {}
-    for (const [key, value] of Object.entries(_query)) {
-      query[snakeCase(key)] = value
+    const {
+      autoWrap500Error,
+      query: _query,
+      queryCamelToSnake,
+      bodyCamelToSnake,
+      body: _body,
+      ...validInit
+    } = mergedInit
+    let query: typeof _query = {}
+
+    if (queryCamelToSnake) {
+      query = convertToSnakeCase(_query)
+    } else {
+      query = _query
     }
-    const res = await fetch(
-      querystring.stringifyUrl(
-        { url, query },
-        { arrayFormat: "separator", arrayFormatSeparator: "|" }
-      ),
-      validInit
+
+    let body
+    if (bodyCamelToSnake) {
+      if (typeof _body === "string") {
+        // for backward compability
+        const data = JSON.parse(_body)
+        body = JSON.stringify(convertToSnakeCase(data), null, 4)
+      } else if (typeof _body === "object" && _body !== null) {
+        body = JSON.stringify(convertToSnakeCase(_body), null, 4)
+      }
+    } else {
+      if (typeof _body === "object" && _body !== null) {
+        body = JSON.stringify(_body, null, 4)
+      }
+    }
+
+    const requestURL = querystring.stringifyUrl(
+      { url, query },
+      { arrayFormat: "separator", arrayFormatSeparator: "|" }
     )
+    const options = {
+      ...validInit,
+      body,
+    }
+    const res = await fetch(requestURL, options)
 
     if (!res.ok) {
-      log = `[API failed - ${init.method ?? "GET"}/${
-        res.status
-      }]: ${url} with params ${validInit.body}, query ${querystring.stringify(
-        query
-      )}`
       logger.error(log)
 
       const json = await (res as ErrResponse).json()
@@ -93,17 +152,14 @@ export async function jsonFetch<T>(
       }
       json.ok = false
       json.log = log
+      json.status = res.status
       return json
     } else {
-      log = `[API ok - ${init.method ?? "GET"}/${
-        res.status
-      }]: ${url} with params ${
-        validInit.body ?? "{}"
-      }, query ${querystring.stringify(query)}`
       logger.info(log)
       const json = await (res as OkResponse<T>).json()
       json.ok = true
       json.log = log
+      json.status = res.status
       return json
     }
   } catch (e: any) {
