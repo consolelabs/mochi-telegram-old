@@ -1,9 +1,10 @@
 import { BOT_TOKEN } from "env"
 import { logger } from "logger"
-import { Context, MiddlewareFn, Telegraf } from "telegraf"
-import { Message, Update } from "typegram"
+import { Context, Telegraf } from "telegraf"
+import { Update } from "typegram"
 import watchlist from "./commands/watchlist/index"
 import ticker from "./commands/ticker/index"
+import tip from "./commands/tip/index"
 
 export const bot: Telegraf<Context<Update>> = new Telegraf(BOT_TOKEN)
 
@@ -12,31 +13,8 @@ const commands: Record<string, (ctx: any) => Promise<void>> = {
   wl: watchlist,
   ticker,
   tick: ticker,
+  tip,
 }
-
-//////// middleware
-// const commandArgs = () => async (ctx: any, next: any) => {
-//   if (ctx.updateType === "message") {
-//     const text = ctx.message.text.toLowerCase()
-//     if (text.startsWith("/")) {
-//       logger.info(
-//         `[${ctx.from.username ?? ctx.from.id}] executing command: ${text}`
-//       )
-//       const args = text.split(" ")
-//       const commandKey = args[0].slice(1)
-//       console.log({ commandKey })
-//       const cmd = commands[commandKey]
-//       if (!cmd) return
-//       await cmd(ctx)
-//       // ctx.state.command = {
-//       //   args: text.split(" "),
-//       // }
-//     }
-//   }
-//   return next()
-// }
-
-// bot.use(commandArgs())
 
 // commands
 Object.entries(commands).forEach(([cmdKey, handler]) =>
@@ -48,12 +26,11 @@ Object.entries(commands).forEach(([cmdKey, handler]) =>
     }
   })
 )
-// bot.command("wl", watchlist)
-// bot.command("ticker", () => {return})
 
 // help message
 bot.help(async (ctx) => {
-  const reply = "`/wl` - Show your favarite list of 12 tokens"
+  const reply =
+    "`/wl` - Show your favarite list of 12 tokens\n/ticker - Display/Compare coin prices and market cap. Data is fetched from CoinGecko\n/tip - Send coins offchain to a user"
   ctx.replyWithMarkdown(reply, {
     reply_to_message_id: ctx.message.message_id,
   })
